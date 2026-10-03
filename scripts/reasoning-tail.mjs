@@ -81,6 +81,8 @@ function collectTurns(rows) {
 }
 
 const SELFQ_RE = /[?？]s*$/;
+// E. 短连接词密度(2026-10-04 用户指认:短连接词增多=信号;历史:09-30 恢复期=短连接词大幅减少,压缩疗法由此起步)
+const CONNECTIVES=['而且','但','所以','然后','不过','另外','总之','接下来','那么','以及','或者','=>'];
 function metrics(text) {
   const sentences = String(text).split(/[。！？!?\u000A]+/).map(s => s.trim()).filter(Boolean);
   const n = sentences.length || 1;
@@ -111,6 +113,11 @@ function metrics(text) {
   for(const ch of String(text)){ const c=ch.codePointAt(0); if(c>=0x4e00&&c<=0x9fff){cjk++; if(tradSet.has(ch))tr++;} }
   const tradPct = cjk? tr/cjk*100 : 0;
 
+    // E. 短连接词行占比
+  const allLines = String(text).split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  const connLines = allLines.filter(l => CONNECTIVES.some(c => l.includes(c))).length;
+  const connPct = allLines.length ? connLines / allLines.length * 100 : 0;
+
   let flags = 0, why = [];
   if (tailCollapse > 0.3) { flags++; why.push('尾部塌缩+' + Math.round(tailCollapse * 100) + 'pp'); }
   if (wordCollapse >= 0.35) { flags++; why.push('词塌缩:' + topWord[0] + '×' + topWord[1] + '(' + Math.round(wordCollapse * 100) + '%)'); }
@@ -119,6 +126,7 @@ function metrics(text) {
   if (selfQ > 0.3) { flags++; why.push('自问句' + Math.round(selfQ * 100) + '%'); }
   if (tradPct > 5) { flags++; why.push('繁体污染' + tradPct.toFixed(1) + '%'); }
   else if (tradPct > 2) { flags++; why.push('繁体渗入' + tradPct.toFixed(1) + '%'); }
+  if (connPct > 40) { flags++; why.push('连接词行' + Math.round(connPct) + '%(初值待标定)'); }
   const level = flags >= 2 ? '🔴 警报' : flags === 1 ? '🟡 注意' : '🟢 正常';
   return {
     sentences: n,
@@ -127,6 +135,7 @@ function metrics(text) {
     topTailWord: topWord[0] + '×' + topWord[1],
     shrink: Math.round(shrink),
     tradPct,
+    connPct: Math.round(connPct),
     level, why: why.join(' · ') || '无'
   };
 }
@@ -172,7 +181,7 @@ for (const t of tail) {
   const mute = u && u.output_tokens != null && u.reasoning_tokens != null && Number(u.output_tokens) === Number(u.reasoning_tokens) && Number(u.output_tokens) > 0;
   const flag = (m.level.includes('警报') || mute) ? '🔴' : m.level.includes('注意') ? '🟡' : '·';
   console.log(flag + ' 第 ' + t.no + ' 轮 | 预兆:' + m.level + ' | ' + m.why + (mute ? ' | ⚠️ 疑似哑火(output==reasoning)' : '') + ' | 链长 ' + t.reasoning.length + ' 字');
-  console.log('   短句基线 ' + m.shortPct + '% | 尾部塌缩 ' + m.tailCollapsePct + 'pp | 尾部高频 ' + m.topTailWord + ' | 句长趋势 ' + m.shrink + '字 | 繁体污染 ' + m.tradPct.toFixed(1) + '%');
+  console.log('   短句基线 ' + m.shortPct + '% | 尾部塌缩 ' + m.tailCollapsePct + 'pp | 尾部高频 ' + m.topTailWord + ' | 句长趋势 ' + m.shrink + '字 | 连接词行 ' + m.connPct + '% | 繁体污染 ' + m.tradPct.toFixed(1) + '%');
   if (!mono) {
     const show = t.reasoning.length > 2400
       ? t.reasoning.slice(0, 1200) + '\n   ……(中略 ' + (t.reasoning.length - 2400) + ' 字)……\n' + t.reasoning.slice(-1200)
