@@ -1,0 +1,4 @@
+*.zstd
+*.zstd.*
+_extracted*/
+data/sample-*.txt
