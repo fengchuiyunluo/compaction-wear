@@ -11,7 +11,7 @@
 //      三项合成 正常 / 注意 / 警报 三档;再并上 usage 判哑火轮(output==reasoning)
 //   3. 防强升:已知帧读不出思考链时,列出帧类型分布并打 UNRECOGNIZED 提醒,绝不静默漏读
 //
-// 已核格式(2026-10-04,session-e5b8d8f5 实测):
+// 已核格式(2026-10-04,实测,会话 id 不随仓发布):
 //   assistant/message → data.message.content[] → {type:"reasoning", text}
 //   旁证流:reasoning-chunks(dt+texts 分片,仅作 fallback 拼接)
 //
